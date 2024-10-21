@@ -1,0 +1,10 @@
+[package]
+name = "cartographer"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+objc = "0.2"
+core-graphics = "0.22"
+cocoa = "0.24"
+core-foundation = "0.10.0"
