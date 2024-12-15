@@ -4,7 +4,8 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+accessibility = "0.2"
+accessibility-sys = "0.2"
+core-foundation = "0.10"
+core-graphics = "0.24"
 objc = "0.2"
-core-graphics = "0.22"
-cocoa = "0.24"
-core-foundation = "0.10.0"
