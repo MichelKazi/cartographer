@@ -4,11 +4,11 @@ It's like [Tactile](https://gitlab.com/lundal/tactile) but for macOS. I wanted i
 
 Press a hotkey, get a grid overlay, press two keys to define a rectangle, window resizes to fit. That's it.
 
+> **Note:** I try and be mindful of pushing too much AI code as open source. Claude Code helped me finally clean up and finish this project. This shit is the future.
+
+> **Alpha software.** This will break. I may introduce breaking changes at any time as I go. Use at your own risk.
 
 https://github.com/user-attachments/assets/5117c415-0aae-4c1b-92dc-1541ff129cbf
-
-
-
 
 ## How it works
 
