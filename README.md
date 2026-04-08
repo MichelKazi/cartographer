@@ -74,6 +74,26 @@ Runs in the background with no dock icon. To quit:
 pkill cartographer
 ```
 
+## Roadmap
+
+what's done and what I want to get to eventually
+
+- [x] grid overlay with two-key window tiling
+- [x] aerospace integration (resize via CLI)
+- [x] hotkey toggle (alt+cmd+t shows/hides)
+- [x] selection timeout (1s reset)
+- [ ] config file (TOML probably) for hotkey, grid size, colors, key bindings
+- [ ] configurable grid dimensions (not just 4x3)
+- [ ] custom key layout (maybe you don't want QWER/ASDF/ZXCV)
+- [ ] custom colorway (overlay tint, highlight, label color)
+- [ ] multi-monitor support (show overlay on the focused window's screen)
+- [ ] menu bar icon with quit/preferences
+- [ ] launch at login
+- [ ] animation on show/hide (maybe, if it doesn't feel slow)
+- [ ] intel build / universal binary
+
+no promises on timelines, I work on this when I feel like it
+
 ## Built with
 
 Rust + Swift. Rust does the heavy lifting (hotkey detection, grid logic, window management, Aerospace integration). Swift handles the overlay window because NSPanel needs to be subclassed to receive keyboard events without activating the app, and doing that from Rust would be miserable.
