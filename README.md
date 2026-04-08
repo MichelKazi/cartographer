@@ -4,7 +4,11 @@ It's like [Tactile](https://gitlab.com/lundal/tactile) but for macOS. I wanted i
 
 Press a hotkey, get a grid overlay, press two keys to define a rectangle, window resizes to fit. That's it.
 
-<!-- TODO: screenshots -->
+
+https://github.com/user-attachments/assets/5117c415-0aae-4c1b-92dc-1541ff129cbf
+
+
+
 
 ## How it works
 
