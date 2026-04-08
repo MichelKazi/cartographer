@@ -48,11 +48,14 @@ fn main() {
         CFRunLoop::get_current().add_timer(&timer, kCFRunLoopCommonModes);
     }
 
-    // fire up NSApp. this blocks forever
+    // fire up NSApp. status item needs NSApp to exist before it can be created
     unsafe {
         use objc::{class, msg_send, sel, sel_impl};
         let app: *mut objc::runtime::Object = msg_send![class!(NSApplication), sharedApplication];
         let _: () = msg_send![app, setActivationPolicy: 1i64]; // Accessory (no dock icon)
+
+        ffi::swift_setup_status_item();
+
         let _: () = msg_send![app, run];
     }
 }

@@ -4,6 +4,8 @@ set -e
 REPO="michelkazi/cartographer"
 INSTALL_DIR="/usr/local/bin"
 BINARY="cartographer"
+PLIST_NAME="com.michelkazi.cartographer.plist"
+LAUNCH_AGENTS="$HOME/Library/LaunchAgents"
 
 echo "installing cartographer..."
 
@@ -46,8 +48,31 @@ else
 fi
 
 echo "installed to ${INSTALL_DIR}/${BINARY}"
+
+# install launch agent for launch at login
+mkdir -p "$LAUNCH_AGENTS"
+cat > "${LAUNCH_AGENTS}/${PLIST_NAME}" <<PLIST
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.michelkazi.cartographer</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>${INSTALL_DIR}/${BINARY}</string>
+    </array>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <false/>
+</dict>
+</plist>
+PLIST
+
+echo "launch agent installed (starts on login)"
 echo ""
-echo "run it with: cartographer"
-echo "quit it with: pkill cartographer"
+echo "run it now with: cartographer"
+echo "quit via the menu bar icon or: pkill cartographer"
 echo ""
 echo "you'll need to grant accessibility permission on first run"

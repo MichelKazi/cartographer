@@ -40,4 +40,5 @@ extern "C" {
     pub fn swift_hide_overlay();
     pub fn swift_highlight_cell(col: i32, row: i32);
     pub fn swift_clear_highlight();
+    pub fn swift_setup_status_item();
 }

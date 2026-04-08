@@ -65,21 +65,33 @@ If you'd rather build it yourself (or you're on Intel):
 git clone https://github.com/michelkazi/cartographer.git
 cd cartographer
 cargo build --release
+cp target/release/cartographer /usr/local/bin/
+cp com.michelkazi.cartographer.plist ~/Library/LaunchAgents/
 ```
 
-Needs Rust and Xcode installed. Binary ends up in `target/release/cartographer`.
+Needs Rust and Xcode installed. The plist gives you launch at login.
 
 ## Usage
 
 ```
-./target/release/cartographer
+cartographer
 ```
 
-Runs in the background with no dock icon. To quit:
+Runs in the background with a menu bar icon (grid icon). Quit from the menu bar or:
 
 ```
 pkill cartographer
 ```
+
+### Launch at login
+
+If you installed via Homebrew:
+
+```
+brew services start cartographer
+```
+
+The curl installer and from-source instructions set up launch at login automatically.
 
 ## Roadmap
 
@@ -94,8 +106,8 @@ what's done and what I want to get to eventually
 - [ ] custom key layout (maybe you don't want QWER/ASDF/ZXCV)
 - [ ] custom colorway (overlay tint, highlight, label color)
 - [ ] multi-monitor support (show overlay on the focused window's screen)
-- [ ] menu bar icon with quit/preferences
-- [ ] launch at login
+- [x] menu bar icon with quit/preferences
+- [x] launch at login
 - [ ] animation on show/hide (maybe, if it doesn't feel slow)
 - [ ] intel build / universal binary
 

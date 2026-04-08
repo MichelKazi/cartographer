@@ -174,6 +174,48 @@ class OverlayController {
     }
 }
 
+// menu bar icon. NSStatusItem needs to be retained or it vanishes
+class StatusItemController: NSObject {
+    static let shared = StatusItemController()
+
+    private var statusItem: NSStatusItem?
+
+    func setup() {
+        let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
+
+        if let button = item.button {
+            if let img = NSImage(systemSymbolName: "square.grid.2x2", accessibilityDescription: "Cartographer") {
+                img.isTemplate = true
+                button.image = img
+            } else {
+                // fallback if SF Symbols aren't available somehow
+                button.title = "⊞"
+            }
+        }
+
+        let menu = NSMenu()
+
+        let prefsItem = NSMenuItem(title: "Preferences...", action: nil, keyEquivalent: ",")
+        prefsItem.isEnabled = false // placeholder for now
+        menu.addItem(prefsItem)
+
+        menu.addItem(NSMenuItem.separator())
+
+        let quitItem = NSMenuItem(title: "Quit Cartographer", action: #selector(quit), keyEquivalent: "q")
+        quitItem.target = self
+        menu.addItem(quitItem)
+
+        item.menu = menu
+        self.statusItem = item
+    }
+
+    @objc func quit() {
+        // hide overlay if it's up, then bail
+        OverlayController.shared.hide()
+        NSApp.terminate(nil)
+    }
+}
+
 // C-callable bridge (rust calls these)
 
 @_cdecl("swift_show_overlay")
@@ -194,6 +236,11 @@ func swiftHighlightCell(_ col: Int32, _ row: Int32) {
 @_cdecl("swift_clear_highlight")
 func swiftClearHighlight() {
     OverlayController.shared.clearHighlight()
+}
+
+@_cdecl("swift_setup_status_item")
+func swiftSetupStatusItem() {
+    StatusItemController.shared.setup()
 }
 
 @_cdecl("swift_get_screen_visible_frame")
