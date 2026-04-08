@@ -8,7 +8,10 @@ Press a hotkey, get a grid overlay, press two keys to define a rectangle, window
 
 > **Alpha software.** This will break. I may introduce breaking changes at any time as I go. Use at your own risk.
 
-https://github.com/user-attachments/assets/5117c415-0aae-4c1b-92dc-1541ff129cbf
+
+
+https://github.com/user-attachments/assets/94b19798-cc1f-48c4-bf9d-f3694793fcc6
+
 
 ## How it works
 
