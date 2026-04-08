@@ -36,6 +36,14 @@ One axis might not resize if there's no sibling in that direction. That's an Aer
 
 ## Install
 
+### Homebrew
+
+```
+brew install michelkazi/tap/cartographer
+```
+
+### curl
+
 ```
 curl -sSfL https://raw.githubusercontent.com/michelkazi/cartographer/main/install.sh | sh
 ```
