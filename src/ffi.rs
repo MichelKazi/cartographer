@@ -17,6 +17,7 @@ pub fn set_dismiss_callback(cb: DismissCallback) {
     let _ = DISMISS_CALLBACK.set(cb);
 }
 
+
 // swift calls these via @_silgen_name
 
 #[no_mangle]
@@ -33,6 +34,22 @@ pub extern "C" fn rust_on_overlay_dismissed() {
     }
 }
 
+
+// flat C struct for passing appearance config across the FFI boundary.
+// field order matters -- must match the Swift side exactly
+#[repr(C)]
+pub struct OverlayAppearance {
+    pub background_opacity: f64,
+    pub border_r: f64, pub border_g: f64, pub border_b: f64, pub border_a: f64,
+    pub fill_r: f64, pub fill_g: f64, pub fill_b: f64, pub fill_a: f64,
+    pub highlight_r: f64, pub highlight_g: f64, pub highlight_b: f64, pub highlight_a: f64,
+    pub text_r: f64, pub text_g: f64, pub text_b: f64, pub text_a: f64,
+    pub font_size_ratio: f64,
+    pub border_width: f64,
+    pub cell_gap: f64,
+    pub corner_radius: f64,
+}
+
 // rust calls these, implemented in swift via @_cdecl
 
 extern "C" {
@@ -41,4 +58,6 @@ extern "C" {
     pub fn swift_highlight_cell(col: i32, row: i32);
     pub fn swift_clear_highlight();
     pub fn swift_setup_status_item();
+    pub fn swift_configure_appearance(appearance: *const std::ffi::c_void);
+    pub fn swift_configure_grid_labels(labels: *const std::os::raw::c_char);
 }

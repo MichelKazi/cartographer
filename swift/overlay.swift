@@ -8,6 +8,35 @@ func rustOnKeyPressed(_ keycode: UInt16)
 @_silgen_name("rust_on_overlay_dismissed")
 func rustOnOverlayDismissed()
 
+
+// matches the #[repr(C)] OverlayAppearance in ffi.rs. field order matters
+struct OverlayAppearance {
+    var backgroundOpacity: Double
+    var borderR: Double; var borderG: Double; var borderB: Double; var borderA: Double
+    var fillR: Double; var fillG: Double; var fillB: Double; var fillA: Double
+    var highlightR: Double; var highlightG: Double; var highlightB: Double; var highlightA: Double
+    var textR: Double; var textG: Double; var textB: Double; var textA: Double
+    var fontSizeRatio: Double
+    var borderWidth: Double
+    var cellGap: Double
+    var cornerRadius: Double
+}
+
+// sensible defaults matching the hardcoded values we used to have
+extension OverlayAppearance {
+    static let `default` = OverlayAppearance(
+        backgroundOpacity: 0.55,
+        borderR: 0.5, borderG: 0.5, borderB: 1.0, borderA: 0.4,
+        fillR: 0.5, fillG: 0.5, fillB: 1.0, fillA: 0.08,
+        highlightR: 0.5, highlightG: 0.5, highlightB: 1.0, highlightA: 0.3,
+        textR: 0.5, textG: 0.5, textB: 1.0, textA: 0.9,
+        fontSizeRatio: 0.4,
+        borderWidth: 1.0,
+        cellGap: 8.0,
+        cornerRadius: 8.0
+    )
+}
+
 // NSPanel because NSWindow can't become key without activating the app.
 // took so fucking long to figure that out, bc I'm not a swift dev
 class OverlayPanel: NSPanel {
@@ -21,22 +50,43 @@ class OverlayPanel: NSPanel {
 
         self.level = .popUpMenu
         self.isOpaque = false
-        self.backgroundColor = NSColor.black.withAlphaComponent(0.15)
-        self.hasShadow = false
+        self.backgroundColor = .clear
+        self.hasShadow = true
         self.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         self.isFloatingPanel = true
         self.becomesKeyOnlyIfNeeded = false
         self.hidesOnDeactivate = false
+        self.alphaValue = 0.0
     }
 
     override var canBecomeKey: Bool { true }
     override var canBecomeMain: Bool { true }
+
+    func fadeIn(duration: TimeInterval = 0.15) {
+        NSAnimationContext.runAnimationGroup { ctx in
+            ctx.duration = duration
+            ctx.timingFunction = CAMediaTimingFunction(name: .easeOut)
+            self.animator().alphaValue = 1.0
+        }
+    }
+
+    func fadeOut(duration: TimeInterval = 0.12, completion: (() -> Void)? = nil) {
+        NSAnimationContext.runAnimationGroup({ ctx in
+            ctx.duration = duration
+            ctx.timingFunction = CAMediaTimingFunction(name: .easeIn)
+            self.animator().alphaValue = 0.0
+        }, completionHandler: {
+            self.orderOut(nil)
+            completion?()
+        })
+    }
 }
 
 class GridView: NSView {
     let cols: Int
     let rows: Int
     let labels: [[String]]
+    let overlayAppearance: OverlayAppearance
     var highlightedCol: Int = -1
     var highlightedRow: Int = -1
 
@@ -46,10 +96,14 @@ class GridView: NSView {
         ["Z", "X", "C", "V"],
     ]
 
-    init(frame: NSRect, cols: Int = 4, rows: Int = 3) {
+    private var cellGap: CGFloat { CGFloat(overlayAppearance.cellGap) }
+    private var cornerRadius: CGFloat { CGFloat(overlayAppearance.cornerRadius) }
+
+    init(frame: NSRect, cols: Int, rows: Int, labels: [[String]], overlayAppearance: OverlayAppearance) {
         self.cols = cols
         self.rows = rows
-        self.labels = GridView.defaultLabels
+        self.labels = labels
+        self.overlayAppearance = overlayAppearance
         super.init(frame: frame)
     }
 
@@ -61,17 +115,21 @@ class GridView: NSView {
 
     override func draw(_ dirtyRect: NSRect) {
         super.draw(dirtyRect)
+        let a = overlayAppearance
 
-        let cellWidth = bounds.width / CGFloat(cols)
-        let cellHeight = bounds.height / CGFloat(rows)
+        let totalGapX = cellGap * CGFloat(cols + 1)
+        let totalGapY = cellGap * CGFloat(rows + 1)
+        let cellWidth = (bounds.width - totalGapX) / CGFloat(cols)
+        let cellHeight = (bounds.height - totalGapY) / CGFloat(rows)
 
-        let borderColor = NSColor(red: 0.5, green: 0.5, blue: 1.0, alpha: 0.4)
-        let fillColor = NSColor(red: 0.5, green: 0.5, blue: 1.0, alpha: 0.08)
-        let highlightColor = NSColor(red: 0.5, green: 0.5, blue: 1.0, alpha: 0.3)
-        let textColor = NSColor(red: 0.5, green: 0.5, blue: 1.0, alpha: 0.9)
+        let borderColor = NSColor(red: a.borderR, green: a.borderG, blue: a.borderB, alpha: a.borderA)
+        let fillColor = NSColor(red: a.fillR, green: a.fillG, blue: a.fillB, alpha: a.fillA)
+        let highlightColor = NSColor(red: a.highlightR, green: a.highlightG, blue: a.highlightB, alpha: a.highlightA)
+        let glowColor = NSColor(red: a.highlightR, green: a.highlightG, blue: a.highlightB, alpha: a.highlightA * 0.5)
+        let textColor = NSColor(red: a.textR, green: a.textG, blue: a.textB, alpha: a.textA)
 
-        let fontSize = cellHeight * 0.4
-        let font = NSFont.boldSystemFont(ofSize: fontSize)
+        let fontSize = cellHeight * a.fontSizeRatio
+        let font = NSFont.monospacedSystemFont(ofSize: fontSize, weight: .semibold)
         let paragraphStyle = NSMutableParagraphStyle()
         paragraphStyle.alignment = .center
 
@@ -84,25 +142,52 @@ class GridView: NSView {
         for row in 0..<rows {
             for col in 0..<cols {
                 // NSView y=0 is bottom, row 0 is top. flip it
-                let y = bounds.height - CGFloat(row + 1) * cellHeight
-                let cellRect = NSRect(
-                    x: CGFloat(col) * cellWidth,
-                    y: y,
-                    width: cellWidth,
-                    height: cellHeight
-                )
+                let flippedRow = rows - 1 - row
+                let x = cellGap + CGFloat(col) * (cellWidth + cellGap)
+                let y = cellGap + CGFloat(flippedRow) * (cellHeight + cellGap)
+                let cellRect = NSRect(x: x, y: y, width: cellWidth, height: cellHeight)
 
-                if col == highlightedCol && row == highlightedRow {
+                let isHighlighted = col == highlightedCol && row == highlightedRow
+                let path = NSBezierPath(roundedRect: cellRect, xRadius: cornerRadius, yRadius: cornerRadius)
+                let ctx = NSGraphicsContext.current!.cgContext
+
+                // drop shadow for depth -- makes each cell look elevated
+                ctx.saveGState()
+                ctx.setShadow(offset: CGSize(width: 0, height: -2), blur: 6,
+                              color: NSColor.black.withAlphaComponent(0.4).cgColor)
+
+                if isHighlighted {
                     highlightColor.setFill()
                 } else {
                     fillColor.setFill()
                 }
-                cellRect.fill()
+                path.fill()
+                ctx.restoreGState()
+
+                // highlight glow (selected cell gets an extra bloom)
+                if isHighlighted {
+                    ctx.saveGState()
+                    ctx.setShadow(offset: .zero, blur: 14, color: glowColor.cgColor)
+                    highlightColor.setFill()
+                    path.fill()
+                    ctx.restoreGState()
+                }
+
+                // top-edge light reflection -- thin bright line simulating light on glass
+                let reflectionInset: CGFloat = cornerRadius
+                let reflectionRect = NSRect(
+                    x: cellRect.minX + reflectionInset,
+                    y: cellRect.maxY - 1.5,
+                    width: cellRect.width - reflectionInset * 2,
+                    height: 1.0
+                )
+                NSColor.white.withAlphaComponent(0.12).setFill()
+                let reflectionPath = NSBezierPath(roundedRect: reflectionRect, xRadius: 0.5, yRadius: 0.5)
+                reflectionPath.fill()
 
                 borderColor.setStroke()
-                let borderPath = NSBezierPath(rect: cellRect)
-                borderPath.lineWidth = 1.0
-                borderPath.stroke()
+                path.lineWidth = isHighlighted ? a.borderWidth * 1.5 : a.borderWidth
+                path.stroke()
 
                 if row < labels.count && col < labels[row].count {
                     let label = labels[row][col]
@@ -140,25 +225,54 @@ class OverlayController {
     private var panel: OverlayPanel?
     private var gridView: GridView?
 
+    // set by rust before the overlay is ever shown
+    var overlayAppearance: OverlayAppearance = .default
+    var gridLabels: [[String]] = GridView.defaultLabels
+    var gridCols: Int = 4
+    var gridRows: Int = 3
+
     private init() {}
 
     func show(x: Double, y: Double, width: Double, height: Double) {
         let frame = NSRect(x: x, y: y, width: width, height: height)
         let overlayPanel = OverlayPanel(frame: frame)
 
-        let grid = GridView(frame: NSRect(origin: .zero, size: frame.size))
-        overlayPanel.contentView = grid
+        // frosted glass -- hudWindow is the lightest blur material.
+        // alphaValue controls how much of the content shows through
+        let blur = NSVisualEffectView(frame: NSRect(origin: .zero, size: frame.size))
+        blur.blendingMode = .behindWindow
+        blur.material = .hudWindow
+        blur.state = .active
+        blur.alphaValue = min(max(CGFloat(overlayAppearance.backgroundOpacity), 0.0), 1.0)
+
+        let grid = GridView(
+            frame: NSRect(origin: .zero, size: frame.size),
+            cols: gridCols,
+            rows: gridRows,
+            labels: gridLabels,
+            overlayAppearance: overlayAppearance
+        )
+
+        // stack: blur behind, grid on top
+        let container = NSView(frame: NSRect(origin: .zero, size: frame.size))
+        container.addSubview(blur)
+        container.addSubview(grid)
+
+        overlayPanel.contentView = container
         overlayPanel.makeKeyAndOrderFront(nil)
         overlayPanel.makeFirstResponder(grid)
+        overlayPanel.fadeIn()
 
         self.panel = overlayPanel
         self.gridView = grid
     }
 
     func hide() {
-        panel?.orderOut(nil)
-        panel = nil
-        gridView = nil
+        guard let panel = panel else { return }
+        panel.fadeOut { [weak self] in
+            self?.panel = nil
+            self?.gridView = nil
+        }
     }
 
     func highlightCell(col: Int, row: Int) {
@@ -188,7 +302,6 @@ class StatusItemController: NSObject {
                 img.isTemplate = true
                 button.image = img
             } else {
-                // fallback if SF Symbols aren't available somehow
                 button.title = "⊞"
             }
         }
@@ -199,6 +312,10 @@ class StatusItemController: NSObject {
         prefsItem.isEnabled = false // placeholder for now
         menu.addItem(prefsItem)
 
+        let restartItem = NSMenuItem(title: "Restart", action: #selector(restart), keyEquivalent: "r")
+        restartItem.target = self
+        menu.addItem(restartItem)
+
         menu.addItem(NSMenuItem.separator())
 
         let quitItem = NSMenuItem(title: "Quit Cartographer", action: #selector(quit), keyEquivalent: "q")
@@ -207,6 +324,12 @@ class StatusItemController: NSObject {
 
         item.menu = menu
         self.statusItem = item
+    }
+
+    @objc func restart() {
+        OverlayController.shared.hide()
+        // re-exec the same binary. replaces the process in-place, no zombie
+        execv(CommandLine.arguments[0], CommandLine.unsafeArgv)
     }
 
     @objc func quit() {
@@ -241,6 +364,25 @@ func swiftClearHighlight() {
 @_cdecl("swift_setup_status_item")
 func swiftSetupStatusItem() {
     StatusItemController.shared.setup()
+}
+
+@_cdecl("swift_configure_appearance")
+func swiftConfigureAppearance(_ ptr: UnsafeRawPointer) {
+    OverlayController.shared.overlayAppearance = ptr.load(as: OverlayAppearance.self)
+}
+
+@_cdecl("swift_configure_grid_labels")
+func swiftConfigureGridLabels(_ labelsPtr: UnsafePointer<CChar>) {
+    let raw = String(cString: labelsPtr)
+    // format: "Q,W,E,R;A,S,D,F;Z,X,C,V"
+    let rows = raw.split(separator: ";").map { row in
+        row.split(separator: ",").map(String.init)
+    }
+    if !rows.isEmpty {
+        OverlayController.shared.gridLabels = rows
+        OverlayController.shared.gridRows = rows.count
+        OverlayController.shared.gridCols = rows[0].count
+    }
 }
 
 @_cdecl("swift_get_screen_visible_frame")

@@ -1,4 +1,4 @@
-// CGEventTap on a background thread, intercepts alt+cmd+t globally
+// CGEventTap on a background thread, intercepts configured hotkey globally
 
 use core_foundation::runloop::{kCFRunLoopCommonModes, CFRunLoop};
 use core_graphics::event::{
@@ -7,25 +7,22 @@ use core_graphics::event::{
 };
 use std::sync::mpsc;
 
-const KEYCODE_T: i64 = 17;
-
-const REQUIRED_FLAGS: CGEventFlags = CGEventFlags::from_bits_truncate(
-    CGEventFlags::CGEventFlagAlternate.bits() | CGEventFlags::CGEventFlagCommand.bits(),
-);
-
 #[derive(Debug)]
 pub enum HotkeyEvent {
     Activate,
     TapDisabled,
 }
 
-pub fn start_listener() -> mpsc::Receiver<HotkeyEvent> {
+pub fn start_listener(
+    trigger_keycode: i64,
+    required_flags: CGEventFlags,
+) -> mpsc::Receiver<HotkeyEvent> {
     let (tx, rx) = mpsc::channel();
-    std::thread::spawn(move || run_event_tap(tx));
+    std::thread::spawn(move || run_event_tap(tx, trigger_keycode, required_flags));
     rx
 }
 
-fn run_event_tap(tx: mpsc::Sender<HotkeyEvent>) {
+fn run_event_tap(tx: mpsc::Sender<HotkeyEvent>, trigger_keycode: i64, required_flags: CGEventFlags) {
     // only KeyDown in the mask. disabled-by-timeout events show up
     // automatically and would cause a shift overflow if you tried
     // to include them. learned that one the hard way
@@ -53,7 +50,7 @@ fn run_event_tap(tx: mpsc::Sender<HotkeyEvent>) {
                 | CGEventFlags::CGEventFlagControl;
             let active_modifiers = flags & modifier_mask;
 
-            if keycode == KEYCODE_T && active_modifiers == REQUIRED_FLAGS {
+            if keycode == trigger_keycode && active_modifiers == required_flags {
                 let _ = tx.send(HotkeyEvent::Activate);
                 return None; // eat it
             }

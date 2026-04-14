@@ -1,0 +1,11 @@
+# cargo-release config
+# don't call this directly -- use ./scripts/release.sh instead,
+# which wraps cargo-release and also handles GH releases + homebrew tap
+
+publish = false
+push = true
+tag = true
+sign-tag = false
+sign-commit = false
+tag-name = "v{{version}}"
+pre-release-commit-message = "v{{version}}"

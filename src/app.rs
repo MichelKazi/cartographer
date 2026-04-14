@@ -1,7 +1,9 @@
 use accessibility::AXUIElement;
+use std::ffi::CString;
 use std::sync::{mpsc, Mutex, OnceLock};
 use std::time::Instant;
 
+use crate::config::Config;
 use crate::ffi;
 use crate::grid::{Grid, Rect, SelectionAction, SelectionState};
 use crate::hotkey::HotkeyEvent;
@@ -26,9 +28,9 @@ pub struct App {
 unsafe impl Send for App {}
 
 impl App {
-    fn new() -> Self {
+    fn new(grid: Grid) -> Self {
         Self {
-            grid: Grid::default_4x3(),
+            grid,
             selection: SelectionState::new(),
             overlay_visible: false,
             target_window: None,
@@ -113,16 +115,33 @@ impl App {
     }
 
     fn check_timeout(&mut self) {
-        if self.overlay_visible && self.selection.check_timeout(Instant::now()) {
+        if self.overlay_visible && self.selection.check_timeout(Instant::now(), &self.grid) {
             unsafe {
                 ffi::swift_clear_highlight();
             }
         }
     }
+
 }
 
-pub fn initialize() {
-    let _ = APP.set(Mutex::new(App::new()));
+pub fn initialize(config: &Config) {
+    let grid = Grid::from_config(&config.grid).unwrap_or_else(|e| {
+        eprintln!("[cartographer] grid config broken ({e}), falling back to defaults");
+        Grid::default_4x3()
+    });
+
+    // push appearance + grid labels to Swift before anything renders
+    unsafe {
+        let appearance = config.appearance.to_ffi();
+        ffi::swift_configure_appearance(
+            &appearance as *const ffi::OverlayAppearance as *const std::ffi::c_void,
+        );
+        let label_str = config.grid.build_label_string();
+        let c_str = CString::new(label_str).expect("label string had a null byte somehow");
+        ffi::swift_configure_grid_labels(c_str.as_ptr());
+    }
+
+    let _ = APP.set(Mutex::new(App::new(grid)));
 
     ffi::set_key_callback(Box::new(|keycode| {
         if let Some(app) = APP.get() {
@@ -139,6 +158,7 @@ pub fn initialize() {
             }
         }
     }));
+
 }
 
 /// Polled from the main thread's run loop timer.

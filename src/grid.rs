@@ -1,4 +1,6 @@
-use std::time::Instant;
+use std::time::{Duration, Instant};
+
+use crate::config::GridConfig;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Cell {
@@ -17,6 +19,8 @@ pub struct Rect {
 pub struct Grid {
     pub cols: usize,
     pub rows: usize,
+    keycode_map: Vec<(u16, usize, usize)>,
+    pub selection_timeout: Duration,
 }
 
 #[derive(Debug, PartialEq)]
@@ -31,26 +35,35 @@ pub enum SelectionState {
     FirstSelected { cell: Cell, selected_at: Instant },
 }
 
-const SELECTION_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(1);
-
-// keycode -> (col, row) for 4x3 QWERTY grid
-const KEYCODE_MAP: &[(u16, usize, usize)] = &[
+// default keycode map for 4x3 QWERTY grid (used by default_4x3)
+const DEFAULT_KEYCODE_MAP: &[(u16, usize, usize)] = &[
     (12, 0, 0), (13, 1, 0), (14, 2, 0), (15, 3, 0), // Q W E R
     (0, 0, 1),  (1, 1, 1),  (2, 2, 1),  (3, 3, 1),  // A S D F
     (6, 0, 2),  (7, 1, 2),  (8, 2, 2),  (9, 3, 2),  // Z X C V
 ];
 
 impl Grid {
-    pub fn new(cols: usize, rows: usize) -> Self {
-        Self { cols, rows }
+    pub fn default_4x3() -> Self {
+        Self {
+            cols: 4,
+            rows: 3,
+            keycode_map: DEFAULT_KEYCODE_MAP.to_vec(),
+            selection_timeout: Duration::from_secs(1),
+        }
     }
 
-    pub fn default_4x3() -> Self {
-        Self::new(4, 3)
+    /// Build a Grid from a validated GridConfig.
+    pub fn from_config(config: &GridConfig) -> Result<Self, String> {
+        Ok(Self {
+            cols: config.cols,
+            rows: config.rows,
+            keycode_map: config.build_keycode_map()?,
+            selection_timeout: config.selection_timeout(),
+        })
     }
 
     pub fn cell_for_keycode(&self, keycode: u16) -> Option<Cell> {
-        KEYCODE_MAP
+        self.keycode_map
             .iter()
             .find(|(kc, col, row)| *kc == keycode && *col < self.cols && *row < self.rows)
             .map(|(_, col, row)| Cell { col: *col, row: *row })
@@ -92,7 +105,7 @@ impl SelectionState {
                 SelectionAction::FirstSelected(cell)
             }
             Self::FirstSelected { cell: first, selected_at } => {
-                if now.duration_since(*selected_at) >= SELECTION_TIMEOUT {
+                if now.duration_since(*selected_at) >= grid.selection_timeout {
                     // timed out, start over
                     *self = Self::FirstSelected { cell, selected_at: now };
                     SelectionAction::FirstSelected(cell)
@@ -110,9 +123,9 @@ impl SelectionState {
     }
 
     /// returns true if we just cleared a timed-out selection (caller should update UI)
-    pub fn check_timeout(&mut self, now: Instant) -> bool {
+    pub fn check_timeout(&mut self, now: Instant, grid: &Grid) -> bool {
         if let Self::FirstSelected { selected_at, .. } = self {
-            if now.duration_since(*selected_at) >= SELECTION_TIMEOUT {
+            if now.duration_since(*selected_at) >= grid.selection_timeout {
                 *self = Self::Empty;
                 return true;
             }
@@ -318,11 +331,12 @@ mod tests {
 
     #[test]
     fn check_timeout_clears_state() {
+        let g = Grid::default_4x3();
         let mut state = SelectionState::new();
         let now = Instant::now();
-        state.advance(12, &Grid::default_4x3(), now);
-        assert!(!state.check_timeout(now + std::time::Duration::from_millis(500)));
-        assert!(state.check_timeout(now + std::time::Duration::from_millis(1001)));
+        state.advance(12, &g, now);
+        assert!(!state.check_timeout(now + std::time::Duration::from_millis(500), &g));
+        assert!(state.check_timeout(now + std::time::Duration::from_millis(1001), &g));
     }
 
     #[test]

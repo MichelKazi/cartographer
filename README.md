@@ -15,7 +15,7 @@ https://github.com/user-attachments/assets/94b19798-cc1f-48c4-bf9d-f3694793fcc6
 
 ## How it works
 
-1. Press `alt+cmd+t` to show the grid overlay
+1. Press `alt+cmd+t` (configurable) to show the grid overlay
 2. Press a grid key to select the first corner (it highlights)
 3. Press another grid key to select the second corner
 4. Window resizes to the bounding rectangle of those two cells
@@ -93,6 +93,50 @@ brew services start cartographer
 
 The curl installer and from-source instructions set up launch at login automatically.
 
+## Configuration
+
+Cartographer reads from `~/.config/cartographer/config.toml` on launch. Every field is optional -- missing fields fall back to defaults. No config file at all? Everything just works out of the box.
+
+Here's the full config with all defaults shown:
+
+```toml
+[hotkey]
+trigger_key = "t"
+modifiers = ["alt", "cmd"]
+
+[grid]
+cols = 4
+rows = 3
+keys = [
+    ["q", "w", "e", "r"],
+    ["a", "s", "d", "f"],
+    ["z", "x", "c", "v"],
+]
+selection_timeout_ms = 1000
+
+[appearance]
+background_opacity = 0.55
+border_color = [0.5, 0.5, 1.0, 0.4]
+fill_color = [0.5, 0.5, 1.0, 0.08]
+highlight_color = [0.5, 0.5, 1.0, 0.3]
+text_color = [0.5, 0.5, 1.0, 0.9]
+font_size_ratio = 0.4
+border_width = 1.0
+cell_gap = 8.0
+corner_radius = 8.0
+```
+
+Colors are `[red, green, blue, alpha]`, values from 0.0 to 1.0.
+
+A few notes:
+- `keys` must match the `cols` x `rows` dimensions. If you set a 6x2 grid, you need 2 rows of 6 keys each
+- Key names are case-insensitive. Letters, numbers, and special keys like `space`, `tab`, `escape`, `return`, `comma`, `period`, `slash`, etc.
+- Modifier options: `alt`/`option`, `cmd`/`command`, `shift`, `ctrl`/`control`
+- `selection_timeout_ms` must be >= 100
+- If the config is invalid, Cartographer prints an error and falls back to defaults
+
+Changes require a restart. There's no hot-reload (yet).
+
 ## Roadmap
 
 what's done and what I want to get to eventually
@@ -101,10 +145,10 @@ what's done and what I want to get to eventually
 - [x] aerospace integration (resize via CLI)
 - [x] hotkey toggle (alt+cmd+t shows/hides)
 - [x] selection timeout (1s reset)
-- [ ] config file (TOML probably) for hotkey, grid size, colors, key bindings
-- [ ] configurable grid dimensions (not just 4x3)
-- [ ] custom key layout (maybe you don't want QWER/ASDF/ZXCV)
-- [ ] custom colorway (overlay tint, highlight, label color)
+- [x] config file (TOML) for hotkey, grid size, colors, key bindings
+- [x] configurable grid dimensions (not just 4x3)
+- [x] custom key layout (maybe you don't want QWER/ASDF/ZXCV)
+- [x] custom colorway (overlay tint, highlight, label color)
 - [ ] multi-monitor support (show overlay on the focused window's screen)
 - [x] menu bar icon with quit/preferences
 - [x] launch at login

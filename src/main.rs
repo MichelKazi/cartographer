@@ -1,4 +1,5 @@
 mod app;
+mod config;
 mod ffi;
 mod grid;
 mod hotkey;
@@ -21,8 +22,15 @@ fn main() {
         );
     }
 
-    app::initialize();
-    let rx = hotkey::start_listener();
+    let cfg = config::load();
+
+    let (trigger_keycode, trigger_flags) = cfg.hotkey.resolve().unwrap_or_else(|e| {
+        eprintln!("[cartographer] hotkey config broken ({e}), using defaults");
+        config::HotkeyConfig::default().resolve().unwrap()
+    });
+
+    app::initialize(&cfg);
+    let rx = hotkey::start_listener(trigger_keycode, trigger_flags);
 
     // claude code says poll the hotkey channel from the main thread's run loop.
     let rx_ptr = Box::into_raw(Box::new(rx));
