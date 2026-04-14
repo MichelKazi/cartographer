@@ -10,7 +10,9 @@ Press a hotkey, get a grid overlay, press two keys to define a rectangle, window
 
 
 
-https://github.com/user-attachments/assets/94b19798-cc1f-48c4-bf9d-f3694793fcc6
+
+https://github.com/user-attachments/assets/a0a5cedc-ed65-4d9b-9ed7-86157a631099
+
 
 
 ## How it works
